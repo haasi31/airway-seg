@@ -65,5 +65,5 @@ Forest:
   N_trees: 1 # Number of separate trees that are grown simultanously
   nerve_center: [0.43,0.88] # If type is set to nerve, this is the x-y position of the nerve
   nerve_radius: [0.01] # Radius of the optical nerve
-  segment_root_path: ./vessel_graph_generation/geometries/roots.yml
+  segment_root_path: ./vessel_graph_generation/geometries/atm255_roots.yml
 
