@@ -1,5 +1,6 @@
 __pycache__
 .vscode
+.idea
 
 # datasets/
 results/
@@ -15,6 +16,6 @@ TODO.md
 *.err
 *.out
 
-vessel_graph_generation/runs
+vessel_graph_generation/datasets
 
 **/*.code-workspace

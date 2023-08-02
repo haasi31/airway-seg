@@ -10,7 +10,8 @@ from vessel_graph_generation.simulation_space import SimulationSpace
 from vessel_graph_generation.utilities import norm_vector
 import csv
 
-class Forest():
+
+class Forest:
 
     def __init__(self, config: dict, d_0: float, r_0: float, sim_space: SimulationSpace, arterial=True):
         """
@@ -32,6 +33,8 @@ class Forest():
             self._initialize_tree_stumps_from_nerve(config, d_0, r_0)
         elif config['type'] == 'stumps':
             self._initialize_tree_stumps(config, d_0, r_0)
+        elif config['type'] == 'bronchi':
+            self._initialize_tree_stumps_from_bronchi(config, d_0, r_0)
         else:
             raise NotImplementedError(f"The Forest initialization type '{config['type']}' is not implemented. Try 'stump' or 'nerve' instead.")
 
@@ -94,13 +97,17 @@ class Forest():
             source_wall = random.choice(source_walls)
 
             if source_wall == 'x0':
-                y_position, z_position = self.sim_space.get_random_valid_position(along_axis=0, first=True)
-                position = np.array([0,y_position,z_position])
-                direction = np.array([
-                    np.random.uniform(0.1,1),
-                    np.random.uniform(-1 if y_position-d_0>0 else 0, 1 if y_position+d_0<self.size_y else 0),
-                    np.random.uniform(-1 if z_position-d_0>0 else 0, 1 if z_position+d_0<self.size_z else 0),
-                ])
+                # y_position, z_position = self.sim_space.get_random_valid_position(along_axis=0, first=True)
+                # position = np.array([0,y_position,z_position])
+                # direction = np.array([
+                #     np.random.uniform(0.1,1),
+                #     np.random.uniform(-1 if y_position-d_0>0 else 0, 1 if y_position+d_0<self.size_y else 0),
+                #     np.random.uniform(-1 if z_position-d_0>0 else 0, 1 if z_position+d_0<self.size_z else 0),
+                # ])
+                # direction = direction / np.linalg.norm(direction) * d_0
+
+                position = np.array([0, 0.5, 0.5])
+                direction = np.array([1, 0, 0])
                 direction = direction / np.linalg.norm(direction) * d_0
 
                 tree = ArterialTree(tree_name, tuple(position), r_0, self.size_x, self.size_y, self.size_z, self)
@@ -182,6 +189,27 @@ class Forest():
                 tree.add_node(position=tuple(position + direction), radius=r_0, parent=tree.root)
                 
                 self.trees.append(tree)
+
+    def _initialize_tree_stumps_from_bronchi(self, config, d_0: float, r_0: float):
+
+        # pos = config['bronchi_pos']
+        # dir = config['bronchi_dir']
+        roots = config['roots']
+        for root in roots:
+            tree_name = f'AirwayTree_{root["name"]}'
+            position = np.array(root['position'])
+            position /= self.sim_space.geometry_size
+            direction = np.array(root['direction'])
+            direction = direction / np.linalg.norm(direction) * d_0
+            # x = pos[tree_counter] / self.sim_space.geometry_size
+            # y = pos[tree_counter][1] / self.sim_space.geometry_size
+            # z = pos[tree_counter][2] / self.sim_space.geometry_size
+            # tree_pos = np.array((x, y, z))
+            # direction = np.array(dir[tree_counter])
+
+            tree = ArterialTree(tree_name, tuple(position), r_0, self.size_x, self.size_y, self.size_z, self)
+            tree.add_node(position=tuple(position + direction), radius=r_0, parent=tree.root)
+            self.trees.append(tree)
 
     def get_trees(self):
         return self.trees

@@ -8,6 +8,8 @@ import math
 import itertools
 from PIL import Image
 from matplotlib import pyplot as plt, collections, cm
+from scipy.ndimage import zoom
+
 
 def rasterize_forest(forest: list[dict],
                      image_resolution: Sequence[float],
@@ -17,7 +19,8 @@ def rasterize_forest(forest: list[dict],
                      max_radius: float=1,
                      max_dropout_prob=0,
                      blackdict: dict[str, bool]=None,
-                     colorize: str=None) -> Tuple[np.ndarray, dict[str, bool]]:
+                     colorize: str=None,
+                     sim_shape: tuple=None) -> Tuple[np.ndarray, dict[str, bool]]:
     """
     Converts the given 3D forest into a 2D (grayscale) image.
     Antialiased drawing of the tree edges is performed by matplotlib.
@@ -51,7 +54,7 @@ def rasterize_forest(forest: list[dict],
     dpi = 100
     x_inch = no_pixels_x / dpi
     y_inch = no_pixels_y / dpi
-    figure = plt.figure(figsize=(x_inch,y_inch))
+    figure = plt.figure(figsize=(y_inch, x_inch))
     figure.patch.set_facecolor('black')
     ax = plt.axes([0., 0., 1., 1.], frameon=False, xticks=[], yticks=[])
     ax.invert_yaxis()
@@ -82,7 +85,7 @@ def rasterize_forest(forest: list[dict],
 
         radius_list.append(radius)
         thickness = radius * scale_factor
-        edges.append([(current_node[axes[1]],current_node[axes[0]]),(proximal_node[axes[1]],proximal_node[axes[0]])])
+        edges.append([(current_node[axes[1]]/sim_shape[1],current_node[axes[0]]/sim_shape[0]),(proximal_node[axes[1]]/sim_shape[1],proximal_node[axes[0]]/sim_shape[0])])
         radii.append(thickness)
     if colorize is not None:
         colors=np.copy(np.array(radii))
@@ -111,6 +114,7 @@ def rasterize_forest(forest: list[dict],
     else:
         img_gray = np.array(Image.fromarray(img).convert("L")).astype(np.uint16)
     return img_gray, blackdict
+
 
 def getCrossSlice(p1: tuple[int], p2: tuple[int], radius: int, voxel_size: float=1, image_dim=(255, 251, 120), mode: Literal['tube', 'cuboid']='cuboid'):
     """
@@ -172,9 +176,12 @@ def getCrossSlice(p1: tuple[int], p2: tuple[int], radius: int, voxel_size: float
 
     raise NotImplementedError(mode)
 
+
 def voxelize_forest(forest: dict,
                     volume_dimensions: Sequence[float],
                     radius_list:list=None,
+                    sim_space=None,
+                    config=None,
                     min_radius=0,
                     max_radius=1,
                     max_dropout_prob=0,
@@ -201,7 +208,7 @@ def voxelize_forest(forest: dict,
         - 3D grayscale volume of all rendered vessels.
         - backlist dictionary containing all parent nodes that were dropped 
     """
-    MIN_DIM_SIZE=30 # A minimal size of 30 is necessary to consider nodes that accidentally grew outside of the simulation space.
+    MIN_DIM_SIZE = 30  # A minimal size of 30 is necessary to consider nodes that accidentally grew outside of the simulation space.
     image_dim = np.array([max(MIN_DIM_SIZE,d) for d in volume_dimensions])
     if radius_list is None:
         radius_list=[]
@@ -268,12 +275,26 @@ def voxelize_forest(forest: dict,
         )
         inds = voxel_indices.astype(np.uint16).transpose().tolist()
         img[tuple(inds)] = np.maximum(1-((dist - (radius - voxel_diag/2)) / voxel_diag), img[tuple(inds)])
+
+    if sim_space is not None:
+        # lobe = np.zeros(image_dim)
+        # scaled_valid_voxels = sim_space.valid_voxels / sim_space.geometry_size * config['image_scale_factor']
+        # for [x, y, z] in scaled_valid_voxels:
+        #     lobe[int(x), int(y), int(z)] = 1
+        # lobe = zoom(sim_space.geometry, config['image_scale_factor'] / sim_space.geometry_size)
+        lobe = sim_space.geometry
+        #img = np.maximum(lobe*0.1, img)
+    seg = np.zeros_like(img)
+    wall = np.zeros_like(img)
+    seg[img > 0.5] = 1
+    wall[np.bitwise_and(0.5 >= img, img>0)] = 1
     # img[img>0]=1
     img=img[pos_correction[0]:pos_correction[0]+volume_dimensions[0],
             pos_correction[1]:pos_correction[1]+volume_dimensions[1],
             pos_correction[2]:pos_correction[2]+volume_dimensions[2]]
-    img = (255*np.clip(img,0,1))
-    return img.astype(np.uint16), blackdict
+    img = (255*np.clip(img, 0, 1))
+    return img.astype(np.uint8), blackdict, lobe.astype(np.uint8), seg.astype(np.uint8), wall.astype(np.uint8)
+
 
 def save_2d_img(img: np.ndarray, out_dir: str, name: str):
     """
@@ -286,6 +307,7 @@ def save_2d_img(img: np.ndarray, out_dir: str, name: str):
         - name: Name of the image
     """
     Image.fromarray(img.astype(np.uint8)).save(f'{out_dir}/{name}.png')
+
 
 def plot_vessel_radii(out_dir: str, radius_list: list[float] = []):
     """

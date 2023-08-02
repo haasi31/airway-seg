@@ -106,7 +106,8 @@ class Greenhouse():
                                 # self.co2_mesh.add(oxy)
                                 to_add.add(oxy)
                         # self.oxy_mesh.delete(oxy)
-                self.co2_mesh.extend(to_add)
+                if self.venous_forest is not None:
+                    self.co2_mesh.extend(to_add)
                 self.oxy_mesh.delete_all(to_remove)
 
                 if self.venous_forest is not None:
@@ -400,16 +401,17 @@ class Greenhouse():
     def save_stats(self, out_dir: str):
         plt.figure(figsize=(6,6))
         oxys = np.array(self.oxy_mesh.get_all_elements())
-        plt.plot(oxys[:,1], 1-oxys[:,0], 'r.')
+        plt.plot(oxys[:,0], oxys[:,1], 'r.')
         plt.title('Final Oxygen Sink Distribution')
         plt.savefig(f'{out_dir}/oxy_distribution.png', bbox_inches='tight')
         plt.cla()
 
-        co2s = np.array(self.co2_mesh.get_all_elements())
-        plt.plot(co2s[:,1], 1-co2s[:,0], 'b.')
-        plt.title('Final CO₂ Sink Distribution')
-        plt.savefig(f'{out_dir}/co2_distribution.png', bbox_inches='tight')
-        plt.cla()
+        if self.venous_forest is not None:
+            co2s = np.array(self.co2_mesh.get_all_elements())
+            plt.plot(co2s[:,1], 1-co2s[:,0], 'b.')
+            plt.title('Final CO₂ Sink Distribution')
+            plt.savefig(f'{out_dir}/co2_distribution.png', bbox_inches='tight')
+            plt.cla()
 
         plt.plot(self.time_per_step)
         total = time.strftime('%H:%M:%S', time.gmtime(sum(self.time_per_step)))
