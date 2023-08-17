@@ -5,7 +5,9 @@ Greenhouse:
     no_voxel_x: 1
     no_voxel_y: 1
     no_voxel_z: 1
-    oxygen_sample_geometry_path: ./vessel_graph_generation/geometries/atm255_{}.npy
+#    oxygen_sample_geometry_path: ./vessel_graph_generation/geometries/ATM_253/ATM_253_{}.npy
+#    oxygen_sample_geometry_path: ./vessel_graph_generation/geometries/ATM_255/ATM_255_{}.npy
+    oxygen_sample_geometry_path: ./vessel_graph_generation/geometries/ATM_257/ATM_257_{}.npy
   d: 0.1 #0.1
   r: 0.005 #0.0025
   FAZ_radius_bound: # The FAZ radius is randomly drawn from a normal distribution with these parameters
@@ -65,5 +67,7 @@ Forest:
   N_trees: 1 # Number of separate trees that are grown simultanously
   nerve_center: [0.43,0.88] # If type is set to nerve, this is the x-y position of the nerve
   nerve_radius: [0.01] # Radius of the optical nerve
-  segment_root_path: ./vessel_graph_generation/geometries/atm255_roots.yml
+#  segment_root_path: ./vessel_graph_generation/geometries/ATM_253/ATM_253_roots.yml
+#  segment_root_path: ./vessel_graph_generation/geometries/ATM_255/ATM_255_roots.yml
+  segment_root_path: ./vessel_graph_generation/geometries/ATM_257/ATM_257_roots.yml
 
