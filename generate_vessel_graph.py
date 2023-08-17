@@ -100,6 +100,8 @@ def main(cfg):
         if config["output"]["save_stats"]:
             tree2img.plot_vessel_radii(out_dir, radius_list)
 
+    with open(os.path.join(dir, 'config.yml'), 'w') as f:
+        yaml.dump(cfg, f)
     # merge 5 lobes
     for i in range(1, 6):
         lobes[i-1] *= i
@@ -110,10 +112,10 @@ def main(cfg):
     airways = np.max(np.array(segmentation), axis=0)
     airway_wall = np.max(np.array(airway_wall), axis=0)
 
-    np.save(f'{dir}/volume.npy', volume)
-    np.save(f'{dir}/lung.npy', lung)
-    np.save(f'{dir}/airways.npy', airways)
-    np.save(f'{dir}/airway_wall.npy', airway_wall)
+    # np.save(f'{dir}/volume.npy', volume)
+    # np.save(f'{dir}/lung.npy', lung)
+    # np.save(f'{dir}/airways.npy', airways)
+    # np.save(f'{dir}/airway_wall.npy', airway_wall)
 
     nifti = nib.Nifti1Image(volume, np.eye(4))
     nib.save(nifti, f"{dir}/volume.nii.gz")

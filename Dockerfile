@@ -10,9 +10,9 @@ RUN apt-get install --no-install-recommends -y libegl1 libgl1 libgomp1
 COPY . /home/OCTA-seg/
 
 # Install dependencies
-RUN pip install -r /home/OCTA-seg/requirements.txt
+RUN pip install -r /home/airway-seg/requirements.txt
 
-# RUN chmod 755 /home/OCTA-seg/dockershell.sh
+# RUN chmod 755 /home/airway-seg/dockershell.sh
 RUN echo "Successfully build image!"
 
 ENTRYPOINT ["/home/OCTA-seg/docker/dockershell.sh"]
