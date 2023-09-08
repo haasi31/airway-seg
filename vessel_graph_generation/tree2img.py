@@ -219,6 +219,8 @@ def voxelize_forest(forest: dict,
     voxel_diag = np.linalg.norm(np.array([1, 1, 1]))
 
     img = np.zeros((no_voxel_x, no_voxel_y, no_voxel_z))
+    if config['mode'] == 'airways':
+        lumen_img = np.zeros((no_voxel_x, no_voxel_y, no_voxel_z))
 
     if blackdict is None:
         blackdict = dict()
@@ -248,7 +250,7 @@ def voxelize_forest(forest: dict,
         proximal_node = np.array(proximal_node)*scale_factor
 
         voxel_indices = np.array(getCrossSlice(
-            current_node+pos_correction, proximal_node+pos_correction, radius,voxel_size, image_dim
+            current_node+pos_correction, proximal_node+pos_correction, radius, voxel_size, image_dim
         ))
         if len(voxel_indices) == 0:
             continue
@@ -275,25 +277,62 @@ def voxelize_forest(forest: dict,
         )
         inds = voxel_indices.astype(np.uint16).transpose().tolist()
         img[tuple(inds)] = np.maximum(1-((dist - (radius - voxel_diag/2)) / voxel_diag), img[tuple(inds)])
-
-    if sim_space is not None:
-        # lobe = np.zeros(image_dim)
-        # scaled_valid_voxels = sim_space.valid_voxels / sim_space.geometry_size * config['image_scale_factor']
-        # for [x, y, z] in scaled_valid_voxels:
-        #     lobe[int(x), int(y), int(z)] = 1
-        # lobe = zoom(sim_space.geometry, config['image_scale_factor'] / sim_space.geometry_size)
-        lobe = sim_space.geometry
-        #img = np.maximum(lobe*0.1, img)
-    seg = np.zeros_like(img)
-    wall = np.zeros_like(img)
-    seg[img > 0.5] = 1
-    wall[np.bitwise_and(0.5 >= img, img>0)] = 1
-    # img[img>0]=1
+        
+        if config['mode'] == 'airways':
+            lumen_radius = 0.6 * radius
+            lumen_voxel_indices = np.array(getCrossSlice(
+                current_node+pos_correction, proximal_node+pos_correction, lumen_radius, voxel_size, image_dim
+            ))
+            lumen_indices = (lumen_voxel_indices+.5) * voxel_size
+            
+            lumen_voxel_vector = lumen_indices - (proximal_node+pos_correction)
+            lumen_scalar_projection = np.dot(lumen_voxel_vector, segment_vector) / np.dot(segment_vector, segment_vector)
+            lumen_inside_segment = np.logical_and(lumen_scalar_projection > 0, lumen_scalar_projection < 1)
+                    
+            lumen_vector_projection = (proximal_node+pos_correction) + np.dot(lumen_scalar_projection[:, None], segment_vector[None, :])
+            lumen_dist = np.linalg.norm(lumen_indices - lumen_vector_projection, axis=1)
+            
+            lumen_inds: list[list] = lumen_voxel_indices[lumen_inside_segment].astype(np.uint16).transpose().tolist()
+            lumen_volume_contribution = 1 - ((lumen_dist[lumen_inside_segment] - (lumen_radius - voxel_diag/2)) / voxel_diag)
+        
+            lumen_img[tuple(lumen_inds)] = np.maximum(lumen_volume_contribution, lumen_img[tuple(lumen_inds)])
+            lumen_dist = np.minimum(
+                np.linalg.norm(lumen_indices-(current_node+pos_correction), axis=1),
+                np.linalg.norm(lumen_indices-(proximal_node+pos_correction), axis=1)
+            )
+            lumen_inds = lumen_voxel_indices.astype(np.uint16).transpose().tolist()
+            lumen_img[tuple(lumen_inds)] = np.maximum(1-((lumen_dist - (lumen_radius - voxel_diag/2)) / voxel_diag), lumen_img[tuple(lumen_inds)])
+    
+    out_dict = {}       
     img=img[pos_correction[0]:pos_correction[0]+volume_dimensions[0],
             pos_correction[1]:pos_correction[1]+volume_dimensions[1],
-            pos_correction[2]:pos_correction[2]+volume_dimensions[2]]
-    img = (255*np.clip(img, 0, 1))
-    return img.astype(np.uint8), blackdict, lobe.astype(np.uint8), seg.astype(np.uint8), wall.astype(np.uint8)
+            pos_correction[2]:pos_correction[2]+volume_dimensions[2]]        
+    
+    seg = np.zeros_like(img)
+    if config['mode'] == 'airways':
+        lumen_img=lumen_img[pos_correction[0]:pos_correction[0]+volume_dimensions[0],
+                            pos_correction[1]:pos_correction[1]+volume_dimensions[1],
+                            pos_correction[2]:pos_correction[2]+volume_dimensions[2]]
+        
+        seg[lumen_img > 0.2] = 1
+        wall = np.zeros_like(img)
+        wall = img - lumen_img*1.6
+        lumen_img = np.clip(lumen_img, 0, 1)
+        wall = np.clip(wall, 0, 1)
+        out_dict['lumen_img'] = lumen_img.astype(np.float32)
+        out_dict['wall'] = wall.astype(np.float32)
+    else:
+        seg[img > 0.2] = 1     
+    img = np.clip(img, 0, 1) 
+    if sim_space is not None:
+        lobe = sim_space.geometry
+    
+    out_dict['img'] = img.astype(np.float32)
+    out_dict['seg'] = seg.astype(np.uint8)
+    out_dict['blackdict'] = blackdict
+    out_dict['lobe'] = lobe.astype(np.uint8)
+    
+    return out_dict
 
 
 def save_2d_img(img: np.ndarray, out_dir: str, name: str):

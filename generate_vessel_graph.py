@@ -11,23 +11,29 @@ import nibabel as nib
 import os
 from tqdm import tqdm
 import yaml
-from multiprocessing import cpu_count
+from multiprocessing import cpu_count, Pool, current_process
 import concurrent.futures
 import warnings
+import time
 
 
 def main(cfg):
     dir = prepare_output_dir(cfg['output'])
     roots = read_config(cfg['Forest']['segment_root_path'])
-    volume, lobes, segmentation, airway_wall = [], [], [], []
-    for i in tqdm(range(1, 6)):
+    volume, lobes, segmentation, airway_wall, lumen = [], [], [], [], []
+    
+    pos = current_process()._identity[0]
+    #pos = 1    
+    np.random.seed((os.getpid() * int(time.time())) % 123456789)
+    for i in tqdm(range(1, 6), leave=True, position=pos, desc=f'#{pos} generation:'):
         # manipulate config for each lobe
         config = copy.deepcopy(cfg)
         config['Greenhouse']['SimulationSpace']['oxygen_sample_geometry_path'] = \
             cfg['Greenhouse']['SimulationSpace']['oxygen_sample_geometry_path'].format(i)
-        # config['Forest']['bronchi_pos'] = [cfg['Forest']['bronchi_pos'][i-1]]
-        # config['Forest']['bronchi_dir'] = [cfg['Forest']['bronchi_dir'][i-1]]
         config['Forest']['roots'] = roots[f'lobe{i}']
+        
+        scan = config['Greenhouse']['SimulationSpace']['oxygen_sample_geometry_path'][-9:-6]
+        affine = nib.load(f'/home/shared/Data/ATM22/train/images/ATM_{scan}_0000.nii.gz').affine
 
         # Initialize greenhouse
         greenhouse = Greenhouse(config['Greenhouse'])
@@ -48,7 +54,6 @@ def main(cfg):
         if config["output"]["save_stats"]:
             greenhouse.save_stats(out_dir)
 
-        # volume_dimension = [int(d) for d in greenhouse.simspace.shape*config['output']['image_scale_factor']]
         volume_dimension = [math.ceil(d) for d in greenhouse.simspace.shape*greenhouse.simspace.geometry_size]
 
         art_edges = [{
@@ -70,22 +75,29 @@ def main(cfg):
 
         radius_list=[]
         if config["output"].get("save_3D_volumes"):
-            art_mat, _, lobe, seg, wall = tree2img.voxelize_forest(art_edges, volume_dimension, radius_list, greenhouse.simspace, config['output'])
-            if config["output"]["save_3D_volumes"] == "npy":
-                np.save(f'{out_dir}/art_img_gray.npy', art_mat_gray)
-                np.save(f'{out_dir}/lob.npy', lobe)
-                np.save(f'{out_dir}/seg.npy', seg)
-            elif config["output"]["save_3D_volumes"] == "nifti":
-                nifti = nib.Nifti1Image(art_mat, np.eye(4))
-                nib.save(nifti, f"{out_dir}/gray.nii.gz")
-                nifti = nib.Nifti1Image(lobe, np.eye(4))
-                nib.save(nifti, f"{out_dir}/lobe.nii.gz")
-                nifti = nib.Nifti1Image(seg, np.eye(4))
-                nib.save(nifti, f"{out_dir}/seg.nii.gz")
+            out_dict = tree2img.voxelize_forest(art_edges, volume_dimension, radius_list, greenhouse.simspace, config)
+            art_mat, seg = out_dict['img'], out_dict['seg']
             volume.append(art_mat)
-            lobes.append(lobe)
             segmentation.append(seg)
-            airway_wall.append(wall)
+            if config['mode'] == 'airways':
+                lumen_, wall, lobe = out_dict['lumen_img'], out_dict['wall'], out_dict['lobe']
+                lumen.append(lumen_)
+                #airway_wall.append(wall)
+                lobes.append(lobe)
+            # if config["output"]["save_3D_volumes"] == "npy":
+            #     np.save(f'{out_dir}/art_img_gray.npy', art_mat)
+            #     np.save(f'{out_dir}/lumen.npy', lumen_)
+            #     np.save(f'{out_dir}/lob.npy', lobe)
+            #     np.save(f'{out_dir}/seg.npy', seg)
+            # if config["output"]["save_3D_volumes"] == "nifti":
+            #     nifti = nib.Nifti1Image(art_mat, affine)
+            #     nib.save(nifti, f"{out_dir}/gray.nii.gz")
+            #     nifti = nib.Nifti1Image(lumen_, affine)
+            #     nib.save(nifti, f"{out_dir}/lumen.nii.gz")
+            #     # nifti = nib.Nifti1Image(lobe, affine)
+            #     # nib.save(nifti, f"{out_dir}/lobe.nii.gz")
+            #     nifti = nib.Nifti1Image(seg, affine)
+            #     nib.save(nifti, f"{out_dir}/seg.nii.gz")
 
         if config["output"]["save_2D_image"]:
             radius_list=[]
@@ -103,28 +115,30 @@ def main(cfg):
     with open(os.path.join(dir, 'config.yml'), 'w') as f:
         yaml.dump(cfg, f)
     # merge 5 lobes
-    for i in range(1, 6):
-        lobes[i-1] *= i
-        segmentation[i-1] *= i
-        airway_wall[i-1] *= i
+    # for i in range(1, 6):
+    #     #lobes[i-1] *= i
+    #     segmentation[i-1] *= i
     volume = np.max(np.array(volume), axis=0)
-    lung = np.max(np.array(lobes), axis=0)
-    airways = np.max(np.array(segmentation), axis=0)
-    airway_wall = np.max(np.array(airway_wall), axis=0)
-
+    segmentation = np.max(np.array(segmentation), axis=0)
+    if config['mode'] == 'airways':
+        lumen = np.max(np.array(lumen), axis=0)
+        #airway_wall = np.max(np.array(airway_wall), axis=0)
+        lung = np.max(np.array(lobes), axis=0)
+    
     # np.save(f'{dir}/volume.npy', volume)
     # np.save(f'{dir}/lung.npy', lung)
     # np.save(f'{dir}/airways.npy', airways)
     # np.save(f'{dir}/airway_wall.npy', airway_wall)
+    
+    scan = config['Greenhouse']['SimulationSpace']['oxygen_sample_geometry_path'][-9:-6]
+    affine = nib.load(f'/home/shared/Data/ATM22/train/images/ATM_{scan}_0000.nii.gz').affine
 
-    nifti = nib.Nifti1Image(volume, np.eye(4))
-    nib.save(nifti, f"{dir}/volume.nii.gz")
-    nifti = nib.Nifti1Image(lung, np.eye(4))
-    nib.save(nifti, f"{dir}/lung.nii.gz")
-    nifti = nib.Nifti1Image(airways, np.eye(4))
-    nib.save(nifti, f"{dir}/airways.nii.gz")
-    nifti = nib.Nifti1Image(airway_wall, np.eye(4))
-    nib.save(nifti, f"{dir}/airway_wall.nii.gz")
+    nib.save(nib.Nifti1Image(volume, affine), f"{dir}/volume.nii.gz")
+    nib.save(nib.Nifti1Image(segmentation, affine), f"{dir}/{config['mode']}.nii.gz")
+    if config['mode'] == 'airways':
+        nib.save(nib.Nifti1Image(lumen, affine), f"{dir}/lumen.nii.gz")
+        nib.save(nib.Nifti1Image(airway_wall, affine), f"{dir}/airway_wall.nii.gz")
+        nib.save( nib.Nifti1Image(lung, affine), f"{dir}/lung.nii.gz")
 
 
 if __name__ == '__main__':
@@ -153,12 +167,17 @@ if __name__ == '__main__':
         threads=args.threads
     if threads>1:
         # Multi processing
-        with tqdm(total=args.num_samples, desc="Generating vessel graphs...") as pbar:
-            with concurrent.futures.ProcessPoolExecutor(max_workers=threads) as executor:
-                future_dict = {executor.submit(main, config): i for i in range(args.num_samples)}
-                for future in concurrent.futures.as_completed(future_dict):
-                    i = future_dict[future]
-                    pbar.update(1)
+        
+        with Pool(threads) as p, tqdm(total=args.num_samples, position=0, desc="Generating vessel graphs...") as pbar:
+            for _ in p.imap_unordered(main, [config]*args.num_samples):
+                pbar.update()
+        
+        # with tqdm(total=args.num_samples, desc="Generating vessel graphs...") as pbar:
+        #     with concurrent.futures.ProcessPoolExecutor(max_workers=threads) as executor:
+        #         future_dict = {executor.submit(main, config): i for i in range(args.num_samples)}
+        #         for future in concurrent.futures.as_completed(future_dict):
+        #             i = future_dict[future]
+        #             pbar.update(1)
     else:
         # Single processing
         for i in tqdm(range(args.num_samples), desc="Generating vessel graphs..."):
