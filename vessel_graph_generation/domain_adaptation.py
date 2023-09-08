@@ -146,11 +146,13 @@ def adapt_airways_and_vessels(args):
     #histogram
     voxels1 = final_volume[lung_mask].ravel()
     voxels2 = orig_vol[lung_mask].ravel()
+    plt.figure()
     plt.hist(voxels2, bins=200, label='orig_vol', histtype='step')
     plt.hist(voxels1, bins=200, label='adapted_vol', histtype='step')
     plt.legend()
     plt.yscale('log')
     plt.savefig(f'{out_dir}/hist/{hash}_histogram.png')
+    plt.close()
     
     # volume
     nifti = nib.Nifti1Image(final_volume.astype(np.int16), affine)
