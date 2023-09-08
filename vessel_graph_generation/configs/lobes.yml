@@ -5,11 +5,11 @@ Greenhouse:
     no_voxel_x: 1
     no_voxel_y: 1
     no_voxel_z: 1
-#    oxygen_sample_geometry_path: ./vessel_graph_generation/geometries/ATM_253/ATM_253_{}.npy
+    oxygen_sample_geometry_path: ./vessel_graph_generation/geometries/ATM_253/ATM_253_{}.npy
 #    oxygen_sample_geometry_path: ./vessel_graph_generation/geometries/ATM_255/ATM_255_{}.npy
-    oxygen_sample_geometry_path: ./vessel_graph_generation/geometries/ATM_257/ATM_257_{}.npy
-  d: 0.1 #0.1
-  r: 0.005 #0.0025
+#    oxygen_sample_geometry_path: ./vessel_graph_generation/geometries/ATM_257/ATM_257_{}.npy
+  d: 0.05 #0.1
+  r: 0.0035 #0.0025
   FAZ_radius_bound: # The FAZ radius is randomly drawn from a normal distribution with these parameters
     - 0.01 #0.44
     - 0.005 #0.04
@@ -20,21 +20,21 @@ Greenhouse:
   param_scale: 3 # Parameter scale used to scale all spatial parameters. 3 means we generate a 3 mm x 3 mm image.
   modes: # List of sequential growth stages. We first develop the superficial vascular complex (SVC), then the deep vascular complex (DVC)
     - name: trachea
-      I: 5 # Number of iterations
+      I: 10 # Number of iterations
       N: 1000 # Number of added oxygen sinks (OSs) per iteration
       eps_n: 0.18 # Minimal distance between nodes and OSs [mm]
       eps_s: 0.135 # Min. distance between OSs [mm]
       eps_k: 0.135 # Satisfaction range of nodes [mm]
       delta_art: 0.5 #0.2925 # Distance of perception volume for arterial nodes [mm]
       delta_ven: 0.2925 # Distance of perception volume for venous nodes [mm]
-      gamma_art: 90 # Angle of perception cone w.r.t. parent for arterial nodes [°]
+      gamma_art: 50 # Angle of perception cone w.r.t. parent for arterial nodes [°]
       gamma_ven: 50 # Angle of perception cone w.r.t. parent for venous nodes [°]
       phi: 15 # Minimal std of attraction vector angles for symetric bifurcation
       omega: 0.05 # 0.3 # Weighting factor optimal growth direction
       kappa: 2.55 # Bifurcation exponent
       delta_sigma: 0 #0.02 # Linear growth rate of simulation space per iter
     - name: 1_bronchi
-      I: 50
+      I: 20
       N: 2000
       eps_n: 0.09
       eps_s: 0.0675
@@ -67,7 +67,7 @@ Forest:
   N_trees: 1 # Number of separate trees that are grown simultanously
   nerve_center: [0.43,0.88] # If type is set to nerve, this is the x-y position of the nerve
   nerve_radius: [0.01] # Radius of the optical nerve
-#  segment_root_path: ./vessel_graph_generation/geometries/ATM_253/ATM_253_roots.yml
+  segment_root_path: ./vessel_graph_generation/geometries/ATM_253/ATM_253_roots.yml
 #  segment_root_path: ./vessel_graph_generation/geometries/ATM_255/ATM_255_roots.yml
-  segment_root_path: ./vessel_graph_generation/geometries/ATM_257/ATM_257_roots.yml
-
+#  segment_root_path: ./vessel_graph_generation/geometries/ATM_257/ATM_257_roots.yml
+mode: 'airways'
