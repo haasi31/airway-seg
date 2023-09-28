@@ -135,7 +135,7 @@ def adapt_airways_and_vessels(args):
     
     #blend_factor = 0.9
     final_volume = noise_equalized_scaled
-    # final_volume = np.zeros_like(adapted_volume)
+    #final_volume = np.ones_like(adapted_volume) * (-950)
     # final_volume = np.where(lung_mask, final_volume, orig_vol) # add background
     # final_volume = np.where(parenchyma_mask, noise_equalized_scaled, final_volume) # add parenchyma
     final_volume = np.where(combined_mask, adapted_volume, final_volume) # add airways and vessels
@@ -162,13 +162,13 @@ def adapt_airways_and_vessels(args):
     vessels_seg = vessels > 0.25
     vessels_seg = np.where(lumen_mask, 0, vessels_seg)
     #vessels_seg[lung_mask == False] = 0
-    vessels_seg = np.logical_and(vessels_seg, lung_mask == False)
+    vessels_seg = np.logical_and(vessels_seg, lung_mask)
     nifti = nib.Nifti1Image(vessels_seg.astype(np.uint8), affine)
     nib.save(nifti, f"{out_dir}/labels/{hash}_vessels.nii.gz")
     
     # airways
     #label_mask[lung_mask == False] = 0
-    label_mask = np.logical_and(label_mask, lung_mask == False)
+    label_mask = np.logical_and(label_mask, lung_mask)
     nifti = nib.Nifti1Image(label_mask.astype(np.uint8), affine)
     nib.save(nifti, f"{out_dir}/labels/{hash}_airways.nii.gz")
     
@@ -183,7 +183,7 @@ def main():
     airway_dirs = sorted(glob.glob(os.path.abspath('vessel_graph_generation/datasets/airways/*')))
     vessel_dirs = sorted(glob.glob(os.path.abspath('vessel_graph_generation/datasets/blood_vessels/*')))
     orig_dir = '/home/shared/Data/ATM22/train/'
-    out_dir = 'vessel_graph_generation/datasets/dataset_4'
+    out_dir = 'vessel_graph_generation/datasets/dataset_4.2_overfit'
     os.makedirs(f'{out_dir}/images', exist_ok=True)
     os.makedirs(f'{out_dir}/labels', exist_ok=True)
     os.makedirs(f'{out_dir}/hist', exist_ok=True)
