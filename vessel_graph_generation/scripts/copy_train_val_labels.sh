@@ -1,0 +1,2 @@
+cp /home/ahaas/data/3_deformed_data/dataset_2023_11_15/labels/* /home/ahaas/data/5_out_cyclegan/train/labels/
+mv /home/ahaas/data/5_out_cyclegan/train/labels/*257* /home/ahaas/data/5_out_cyclegan/val/labels/
