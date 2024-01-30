@@ -22,10 +22,10 @@ class Greenhouse():
         self.param_scale: float = config['param_scale']
         self.d: float = config['d'] / self.param_scale
         self.r: float = config['r'] / self.param_scale
-        self.FAZ_radius = np.random.normal(config['FAZ_radius_bound'][0] / self.param_scale, config['FAZ_radius_bound'][1] / self.param_scale)
-        self.rotation_radius: float = config['rotation_radius'] / self.param_scale
-        self.FAZ_center: Tuple[float, float] = config['FAZ_center']
-        self.simspace = SimulationSpace(config["SimulationSpace"], self.FAZ_center, self.FAZ_radius)
+        # self.FAZ_radius = np.random.normal(config['FAZ_radius_bound'][0] / self.param_scale, config['FAZ_radius_bound'][1] / self.param_scale)
+        # self.rotation_radius: float = config['rotation_radius'] / self.param_scale
+        # self.FAZ_center: Tuple[float, float] = config['FAZ_center']
+        self.simspace = SimulationSpace(config["SimulationSpace"])
 
         self.init_params_from_config(self.modes[0])
 
@@ -171,8 +171,8 @@ class Greenhouse():
         new_nodes: list[Node] = []
         # Vessel Growth
         for node, atts in att_node_assignment.items():
-            vector_to_center = np.array(self.FAZ_center)-node.position[:2]
-            dist_to_center = np.linalg.norm(vector_to_center)
+            # vector_to_center = np.array(self.FAZ_center)-node.position[:2]
+            # dist_to_center = np.linalg.norm(vector_to_center)
             if node.is_leaf:
                 v = node.get_proximal_segment()
                 angles_i = get_angle_between_vectors(v, atts - node.position)
@@ -187,7 +187,7 @@ class Greenhouse():
 
                 angles = angles_i[valid_inds]
                 # IFF the standard deviation of the angles formed by the attraction vectors is larger than a predefined threshold φ
-                if np.std(angles) > self.phi and (self.FAZ_radius==0 or ((dist_to_center / (2*self.FAZ_radius))**5 > random.uniform(0,1) and get_angle_between_two_vectors(vector_to_center, avg_attraction_vector[:2])>90)):
+                if np.std(angles) > self.phi: # and (self.FAZ_radius==0 or ((dist_to_center / (2*self.FAZ_radius))**5 > random.uniform(0,1) and get_angle_between_two_vectors(vector_to_center, avg_attraction_vector[:2])>90)):
                     # Bifurcation:
                     
                     # # Radii of two resulting vessels after Murray's law
@@ -240,18 +240,18 @@ class Greenhouse():
                     # Elongation
                     g = self.omega*norm_vector(v) + (1-self.omega)*norm_vector(sum([norm_vector(att-node.position) for att in atts]))
                     
-                    if self.rotation_radius>0 and t>15:
-                        # Apply quadratic increasing weight to grow in circle near the FAZ
-                        g = norm_vector(g)
-                        center_vector = norm_vector(np.array(self.FAZ_center)-node.position[:2])
-                        dist_new_pos_to_center = np.linalg.norm(np.array(self.FAZ_center)-(node.position + self.d * g)[:2])
-                        weight = max(0.01 if not first_mode else 0,self.rotation_radius-dist_new_pos_to_center)
-                        weight = sqrt(weight)
-                        ort_vector = np.array([-center_vector[1],center_vector[0],0])
-                        if get_angle_between_two_vectors(g[:2],ort_vector[:2])>90:
-                            ort_vector = -1*ort_vector
-                        out_vector = np.array([-center_vector[0],-center_vector[1],0])
-                        g = (1-weight)*g + 0.7*weight*ort_vector + 0.3*weight*out_vector
+                    # if self.rotation_radius>0 and t>15:
+                    #     # Apply quadratic increasing weight to grow in circle near the FAZ
+                    #     g = norm_vector(g)
+                    #     center_vector = norm_vector(np.array(self.FAZ_center)-node.position[:2])
+                    #     dist_new_pos_to_center = np.linalg.norm(np.array(self.FAZ_center)-(node.position + self.d * g)[:2])
+                    #     weight = max(0.01 if not first_mode else 0,self.rotation_radius-dist_new_pos_to_center)
+                    #     weight = sqrt(weight)
+                    #     ort_vector = np.array([-center_vector[1],center_vector[0],0])
+                    #     if get_angle_between_two_vectors(g[:2],ort_vector[:2])>90:
+                    #         ort_vector = -1*ort_vector
+                    #     out_vector = np.array([-center_vector[0],-center_vector[1],0])
+                    #     g = (1-weight)*g + 0.7*weight*ort_vector + 0.3*weight*out_vector
 
                     p_k = np.real(node.position + self.d * norm_vector(g))
                     new_nodes.append(node.tree.add_node(p_k, self.r, node, self.kappa))
@@ -286,7 +286,7 @@ class Greenhouse():
                 # Rotation axis is cross product of child-vector and average attraction vector
                 distal_vector = norm_vector(node.get_distal_segment())
                 cross = np.cross(distal_vector, avg_attraction_vector)
-                if all(cross==0) or ((dist_to_center / (2*self.FAZ_radius))**5 <= random.uniform(0,1) and get_angle_between_two_vectors(vector_to_center, avg_attraction_vector[:2])<=90):
+                if all(cross==0) : #or ((dist_to_center / (2*self.FAZ_radius))**5 <= random.uniform(0,1) and get_angle_between_two_vectors(vector_to_center, avg_attraction_vector[:2])<=90):
                     continue
                 rot_axis = norm_vector(cross)
                 theta = phi_2 #get_angle_between_vectors(distal_vector, avg_attraction_vector)

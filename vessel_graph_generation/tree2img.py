@@ -180,7 +180,7 @@ def getCrossSlice(p1: tuple[int], p2: tuple[int], radius: int, voxel_size: float
 def voxelize_forest(forest: dict,
                     volume_dimensions: Sequence[float],
                     radius_list:list=None,
-                    sim_space=None,
+                    geometry=None,
                     config=None,
                     min_radius=0,
                     max_radius=1,
@@ -314,7 +314,7 @@ def voxelize_forest(forest: dict,
                             pos_correction[1]:pos_correction[1]+volume_dimensions[1],
                             pos_correction[2]:pos_correction[2]+volume_dimensions[2]]
         
-        seg[lumen_img > 0.2] = 1
+        seg[lumen_img > 0.3] = 1
         wall = np.zeros_like(img)
         wall = img - lumen_img*1.6
         lumen_img = np.clip(lumen_img, 0, 1)
@@ -324,8 +324,8 @@ def voxelize_forest(forest: dict,
     else:
         seg[img > 0.2] = 1     
     img = np.clip(img, 0, 1) 
-    if sim_space is not None:
-        lobe = sim_space.geometry
+    if geometry is not None:
+        lobe = geometry
     
     out_dict['img'] = img.astype(np.float32)
     out_dict['seg'] = seg.astype(np.uint8)

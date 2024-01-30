@@ -14,10 +14,10 @@ def normalize_vector(vec):
 
 
 # Function to prepare output directory
-def prepare_output_dir(config) -> str:
+def prepare_output_dir(output_path) -> str:
 
-    output_dir = os.path.abspath(config['directory'])
-    output_dir = os.path.join(output_dir, datetime.now().strftime('%Y%m%d_%H%M%S')+"_"+str(uuid4()))
+    output_dir = os.path.abspath(output_path)
+    output_dir = os.path.join(output_dir, datetime.now().strftime('%Y%m%d_%H%M%S'))
     os.makedirs(output_dir, exist_ok=True)
     return output_dir
 

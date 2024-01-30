@@ -23,11 +23,11 @@ class SimulationSpace:
             - FAZ_center: 2D simulation space position of the foveal avascular zone in the x-y plane
             - FAZ_radius: Radius of the foveal avascular zone
         """
-        self.fixed_geometry = config.get('oxygen_sample_geometry_path') is not None
+        self.fixed_geometry = config.get('geometry_path') is not None
 
         # We voxelize the geometry space to efficiently sample oxygen sink positions
         if self.fixed_geometry:
-            self.geometry: np.ndarray = np.load(config['oxygen_sample_geometry_path'])
+            self.geometry: np.ndarray = np.load(config['geometry_path'])
             self.geometry_size = max(self.geometry.shape)
             self.shape = np.array(self.geometry.shape) / self.geometry_size
             self.size_x, self.size_y, self.size_z = self.shape
