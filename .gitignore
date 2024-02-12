@@ -18,6 +18,6 @@ TODO.md
 
 vessel_graph_generation/datasets
 vessel_graph_generation/geometries/*/*.npy
-vessel_graph_generation/geometries/*.yml
+vessel_graph_generation/geometries/*/*.yml
 
 **/*.code-workspace

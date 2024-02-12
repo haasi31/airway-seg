@@ -3,10 +3,15 @@ import glob
 from multiprocessing import Pool
 from tqdm import tqdm
 
+
+"""
+Predict the 5 lobe masks of a lung to create the simulation spaces.
+Utilizing https://github.com/JoHof/lungmask
+"""
+
 def process_file(path):
     filename = os.path.basename(path)
     filename = f"{filename.split('.')[0]}_lobes_mask.nii.gz"
-    # output_path = os.path.join("/home/ahaas/data/0_input_simulation/ATM_preparation/masks_refined", filename)
     output_path = os.path.join("/home/shared/Data/ATM22/train/masks", filename)
     if os.path.exists(output_path):
         print(f"Skipping {path}, already exists")
