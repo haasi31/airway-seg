@@ -28,7 +28,7 @@ python /home/ahaas/airway-seg/csv2nifti.py \
     --scans $scans
 
 echo "Run manual domain adaptation"
-python graph_generation/domain_adaptation/domain_adaptation.py \
+python rule_based_adaptations/domain_adaptation.py \
     --input_dir "/home/ahaas/data/1_simulated_data/$experiment_name" \
     --out_dir "/home/ahaas/data/2_manual_adapted_data" \
     --threads 5 \

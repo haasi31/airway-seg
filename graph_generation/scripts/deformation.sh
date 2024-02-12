@@ -7,7 +7,3 @@ python /home/ahaas/airway-seg/vessel_graph_generation/domain_adaptation/deformat
     --crop_foreground \
     --save_original \
     --threads 20
-
-# --deformatoin
-# --num_deformation 5
-# --visualization
