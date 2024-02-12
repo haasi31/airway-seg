@@ -21,7 +21,7 @@ python /home/ahaas/airway-seg/generate_graph.py \
     --scans $scans
 
 echo "Run voxelization"
-python /home/ahaas/airway-seg/csv2nifit.py \
+python /home/ahaas/airway-seg/csv2nifti.py \
     --input_dir "/home/ahaas/data/1_simulated_data/$experiment_name" \
     --threads 14 \
     --min_radius 0.0011 \
