@@ -8,7 +8,7 @@ from multiprocessing import Pool, cpu_count
 import argparse
 import os
 
-from vessel_graph_generation import tree2img
+from graph_generation import tree2img
 
 
 def main():
@@ -48,7 +48,7 @@ def main():
 
 def csv2nifti(args):
     sim_path, min_radius = args['sim_path'], args['min_radius']
-    volume, segmentation, lumen, airway_wall, lobes = [], [], [], [], []
+    volume, segmentation, lumen, lobes = [], [], [], []
     
     with open(f'{sim_path}/lobe_1/config.yml', 'r') as file:
         config = yaml.safe_load(file)
@@ -57,6 +57,7 @@ def csv2nifti(args):
         print(f"Skipping {sim_path} as {label_name} already exists.")
         return
 
+    # iterate over the 5 lobes
     for lobe_idx in range(1, 6):
         with open(f'{sim_path}/lobe_{lobe_idx}/graph.csv', 'r') as file:
             reader = csv.reader(file)
@@ -76,35 +77,30 @@ def csv2nifti(args):
         with open(f'{sim_path}/lobe_{lobe_idx}/config.yml', 'r') as file:
             config = yaml.safe_load(file)
             
-            
-                
         out_dict = tree2img.voxelize_forest(edges, volume_dimension, radius_list, geometry, config, min_radius=min_radius)
         mat, seg = out_dict['img'], out_dict['seg']
         volume.append(mat)
         segmentation.append(seg)
         if config['mode'] == 'airways':
-            lumen_, wall, lobe = out_dict['lumen_img'], out_dict['wall'], out_dict['lobe']
+            lumen_, lobe = out_dict['lumen_img'], out_dict['lobe']
             lumen.append(lumen_)
-            #airway_wall.append(wall)
             lobes.append(lobe)
-            
+       
+    # save the combined lobes  
     volume = np.max(np.array(volume), axis=0)
     segmentation = np.max(np.array(segmentation), axis=0)
     if config['mode'] == 'airways':
         lumen = np.max(np.array(lumen), axis=0)
-        #airway_wall = np.max(np.array(airway_wall), axis=0)
         lung = np.max(np.array(lobes), axis=0)
     
     scan = config['ATM_scan']
     affine = nib.load(f'/home/shared/Data/ATM22/train/images/ATM_{scan}_0000.nii.gz').affine
 
-    #nib.save(nib.Nifti1Image(volume, affine), f"{sim_path}/volume.nii.gz")
-    #label_name = f'{config["mode"]}_label.nii.gz' if min_radius == 0 else f'{config["mode"]}_label_minradius{min_radius}.nii.gz'
+    nib.save(nib.Nifti1Image(volume, affine), f"{sim_path}/volume.nii.gz")
     nib.save(nib.Nifti1Image(segmentation, affine), f"{sim_path}/{label_name}")
-    #if config['mode'] == 'airways':
-    #    nib.save(nib.Nifti1Image(lumen, affine), f"{sim_path}/lumen.nii.gz")
-        #nib.save(nib.Nifti1Image(airway_wall, affine), f"{sim_path}/airway_wall.nii.gz")
-    #    nib.save( nib.Nifti1Image(lung, affine), f"{sim_path}/lung.nii.gz")
+    if config['mode'] == 'airways':
+        nib.save(nib.Nifti1Image(lumen, affine), f"{sim_path}/lumen.nii.gz")
+        nib.save( nib.Nifti1Image(lung, affine), f"{sim_path}/lung.nii.gz")
 
 
 if __name__ == '__main__':

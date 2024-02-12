@@ -12,24 +12,20 @@ Greenhouse:
       eps_n: 0.18 # Minimal distance between nodes and OSs [mm]
       eps_s: 0.135 # Min. distance between OSs [mm]
       eps_k: 0.135 # Satisfaction range of nodes [mm]
-      delta_art: 0.2 #0.2925 # Distance of perception volume for arterial nodes [mm]
-      delta_ven: 0.2925 # Distance of perception volume for venous nodes [mm]
-      gamma_art: 60 # Angle of perception cone w.r.t. parent for arterial nodes [°]
-      gamma_ven: 50 # Angle of perception cone w.r.t. parent for venous nodes [°]
+      delta: 0.2 # Distance of perception volume for nodes [mm]
+      gamma: 60 # Angle of perception cone w.r.t. parent for nodes [°]
       phi: 15 # Minimal std of attraction vector angles for symetric bifurcation
-      omega: 0.05 # 0.3 # Weighting factor optimal growth direction
+      omega: 0.05 # Weighting factor optimal growth direction
       kappa: 2.55 # Bifurcation exponent
-      delta_sigma: 0.2 #0.02 # Linear growth rate of simulation space per iter
+      delta_sigma: 0.2 # Linear growth rate of simulation space per iter
     - name: smaller_vessels
       I: 100
       N: 2000
       eps_n: 0.055
       eps_s: 0.035
       eps_k: 0.035
-      delta_art: 0.1
-      delta_ven: 0.14625
-      gamma_art: 90
-      gamma_ven: 90
+      delta: 0.1
+      gamma: 90
       phi: 0
       omega: 0
       kappa: 2.9
@@ -45,7 +41,7 @@ output:
 Forest:
   type: bronchi # Initialize forest by tree stumps at the faces of the 3D volume
   
-geometry_path: /home/ahaas/data/0_input_simulation/geometries
+geometry_path: geometries #/home/ahaas/data/0_input_simulation/geometries
 ATM_path: /home/shared/Data/ATM22/train/images
 mode: vessels
 ATM_scans: ['010', '027', '056', '057', '116', '175', '221', '253', '255', '257']

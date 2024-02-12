@@ -1,11 +1,11 @@
 import numpy as np
 import random
-from vessel_graph_generation.utilities import eukledian_dist
+from graph_generation.utilities import eukledian_dist
 import warnings
 from math import ceil
 from typing import Tuple
 
-GEOMETRY_SIZE = 30  # 76
+GEOMETRY_SIZE = 30 
 
 class SimulationSpace:
     """
@@ -41,9 +41,6 @@ class SimulationSpace:
             self.geometry_size = GEOMETRY_SIZE
             self.FAZ_center = np.array(FAZ_center)*self.geometry_size
             self.FAZ_radius = np.array(FAZ_radius)*self.geometry_size*0.5
-            # y_coords, x_coords = np.ogrid[:ceil(self.size_x*self.geometry_size), :ceil(self.size_y*self.geometry_size)]
-            # self.geometry = (x_coords - self.FAZ_center[0])**2 + (y_coords - self.FAZ_center[1])**2 > self.FAZ_radius**2
-            # self.geometry = np.expand_dims(self.geometry,-1)
             self.geometry = np.ones((ceil(self.size_x*self.geometry_size), ceil(self.size_y*self.geometry_size), ceil(self.size_z*self.geometry_size)))
             self.valid_voxels = np.argwhere(self.geometry)  # Positions miss z dim
 

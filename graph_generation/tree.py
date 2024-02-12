@@ -12,7 +12,7 @@ class Node(anytree.NodeMixin):
 
         Parameters:
         -----------
-            - tree: ArterialTree of which the node is part of
+            - tree: Tree of which the node is part of
             - name: Name of the node
             - position: 3D position in the simulation space
             - radius: Radius of the proximal vessel segment
@@ -21,7 +21,7 @@ class Node(anytree.NodeMixin):
         """
         super(Node, self).__init__()
         
-        self.tree: ArterialTree = tree
+        self.tree: Tree = tree
         self.name = name
         
         self.position = np.array(position)
@@ -185,7 +185,7 @@ class Node(anytree.NodeMixin):
         
 
 
-class ArterialTree():
+class Tree():
     
     def __init__(self, name, root_position, r_0, size_x, size_y, size_z, forest):
 

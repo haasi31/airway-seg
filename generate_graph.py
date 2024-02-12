@@ -1,10 +1,10 @@
 import argparse
 import copy
 import csv
-from vessel_graph_generation.forest import Forest
-from vessel_graph_generation.greenhouse import Greenhouse
-from vessel_graph_generation.utilities import prepare_output_dir, read_config
-import vessel_graph_generation.tree2img as tree2img
+from graph_generation.forest import Forest
+from graph_generation.greenhouse import Greenhouse
+from graph_generation.utilities import prepare_output_dir, read_config
+import graph_generation.tree2img as tree2img
 import math
 import numpy as np
 import nibabel as nib
@@ -91,6 +91,7 @@ def generate_trees(cfg):
         pos = 1
     np.random.seed((os.getpid() * int(time.time())) % 123456789)
     
+    # interate over the 5 lobes
     for i in tqdm(range(1, 6), leave=False, position=pos, desc=f'ATM {cfg["ATM_scan"]} {cfg["mode"]} generation'):
         # manipulate config for each lobe
         config = copy.deepcopy(cfg)
@@ -99,7 +100,8 @@ def generate_trees(cfg):
         mode = config['mode']
         affine = nib.load(f'{config["ATM_path"]}/ATM_{scan}_0000.nii.gz').affine
         
-        config['Greenhouse']['SimulationSpace']['geometry_path'] = f'{config["geometry_path"]}/ATM_{scan}/lobe_{i}_simulation_space.npy' #f'/ATM_{config["ATM_scan"]}/lobe_{i}_simulation_space.npy'
+        # load configs for simulation space and roots for this lobe
+        config['Greenhouse']['SimulationSpace']['geometry_path'] = f'{config["geometry_path"]}/ATM_{scan}/lobe_{i}_simulation_space.npy'
         config['Forest']['roots'] = read_config(f'{config["geometry_path"]}/ATM_{scan}/lobe_{i}_{mode}_roots.yml')
 
         # Initialize greenhouse
@@ -112,66 +114,49 @@ def generate_trees(cfg):
             yaml.dump(config, f)
 
         # Initialize forest
-        arterial_forest = Forest(config['Forest'], greenhouse.d, greenhouse.r, greenhouse.simspace)
-        venous_forest = None
+        forest = Forest(config['Forest'], greenhouse.d, greenhouse.r, greenhouse.simspace)
+        greenhouse.set_forests(forest)
 
-        greenhouse.set_forests(arterial_forest, venous_forest)
-
-        # Grow vessel network
+        # Grow airway/vessel network
         greenhouse.develop_forest()
         if config["output"]["save_stats"]:
             greenhouse.save_stats(out_dir)
 
         volume_dimension = [math.ceil(d) for d in greenhouse.simspace.shape*greenhouse.simspace.geometry_size]
 
-        art_edges = [{
+        edges = [{
             "node1": current_node.position,
             "node2": current_node.get_proximal_node().position,
             "radius": current_node.radius
-        } for tree in arterial_forest.get_trees() for current_node in tree.get_tree_iterator(exclude_root=True, only_active=False)]
+        } for tree in forest.get_trees() for current_node in tree.get_tree_iterator(exclude_root=True, only_active=False)]
 
-        # Save vessel graph as csv file
+        # Save airway/vessel graph as csv file
         if config['output']['save_trees']:
             filepath = os.path.join(out_dir, 'graph.csv')
             with open(filepath, 'w+') as file:
                 writer = csv.writer(file)
                 writer.writerow(["node1", "node2", "radius"])
-                edges = art_edges
                 for row in edges:
                     writer.writerow([row["node1"], row["node2"], row["radius"]])
             stats = {
                 'volume_dimension': volume_dimension,
                 'radius_list': [],
-                'geometry': config['Greenhouse']['SimulationSpace']['geometry_path'], #greenhouse.simspace.geometry,
+                'geometry': config['Greenhouse']['SimulationSpace']['geometry_path'],
             }
             with open(os.path.join(out_dir, 'graph_stats.yml'), 'w+') as file:
                 yaml.dump(stats, file)
 
         radius_list=[]
         if config["output"].get("save_3D_volumes"):
-            out_dict = tree2img.voxelize_forest(art_edges, volume_dimension, radius_list, greenhouse.simspace.geometry, config)
+            out_dict = tree2img.voxelize_forest(edges, volume_dimension, radius_list, greenhouse.simspace.geometry, config)
             art_mat, seg = out_dict['img'], out_dict['seg']
             volume.append(art_mat)
             segmentation.append(seg)
             if config['mode'] == 'airways':
                 lumen_, wall, lobe = out_dict['lumen_img'], out_dict['wall'], out_dict['lobe']
                 lumen.append(lumen_)
-                #airway_wall.append(wall)
+                airway_wall.append(wall)
                 lobes.append(lobe)
-            # if config["output"]["save_3D_volumes"] == "npy":
-            #     np.save(f'{out_dir}/art_img_gray.npy', art_mat)
-            #     np.save(f'{out_dir}/lumen.npy', lumen_)
-            #     np.save(f'{out_dir}/lob.npy', lobe)
-            #     np.save(f'{out_dir}/seg.npy', seg)
-            # if config["output"]["save_3D_volumes"] == "nifti":
-            #     nifti = nib.Nifti1Image(art_mat, affine)
-            #     nib.save(nifti, f"{out_dir}/gray.nii.gz")
-            #     nifti = nib.Nifti1Image(lumen_, affine)
-            #     nib.save(nifti, f"{out_dir}/lumen.nii.gz")
-            #     # nifti = nib.Nifti1Image(lobe, affine)
-            #     # nib.save(nifti, f"{out_dir}/lobe.nii.gz")
-            #     nifti = nib.Nifti1Image(seg, affine)
-            #     nib.save(nifti, f"{out_dir}/seg.nii.gz")
 
         if config["output"]["save_2D_image"]:
             radius_list=[]
@@ -179,7 +164,7 @@ def generate_trees(cfg):
             del image_res[config["output"]["proj_axis"]]
             sim_shape = [*greenhouse.simspace.shape]
             del sim_shape[config["output"]["proj_axis"]]
-            art_mat,_ = tree2img.rasterize_forest(art_edges, image_res, MIP_axis=config["output"]["proj_axis"], radius_list=radius_list, sim_shape=sim_shape)
+            art_mat,_ = tree2img.rasterize_forest(edges, image_res, MIP_axis=config["output"]["proj_axis"], radius_list=radius_list, sim_shape=sim_shape)
             art_mat_gray = art_mat.astype(np.uint8)
             tree2img.save_2d_img(art_mat_gray, out_dir, "img_gray")
 
@@ -188,25 +173,17 @@ def generate_trees(cfg):
 
     with open(os.path.join(dir, 'config.yml'), 'w') as f:
         yaml.dump(cfg, f)
-    # merge 5 lobes
-    # for i in range(1, 6):
-    #     #lobes[i-1] *= i
-    #     segmentation[i-1] *= i
-
+        
+    # save 5 lobes combined
     if config['output'].get('save_3D_volumes'):
+        # merge 5 lobes
         volume = np.max(np.array(volume), axis=0)
         segmentation = np.max(np.array(segmentation), axis=0)
         if config['mode'] == 'airways':
             lumen = np.max(np.array(lumen), axis=0)
-            #airway_wall = np.max(np.array(airway_wall), axis=0)
             lung = np.max(np.array(lobes), axis=0)
         
-        # np.save(f'{dir}/volume.npy', volume)
-        # np.save(f'{dir}/lung.npy', lung)
-        # np.save(f'{dir}/airways.npy', airways)
-        # np.save(f'{dir}/airway_wall.npy', airway_wall)
-        
-        scan = config['Greenhouse']['SimulationSpace']['oxygen_sample_geometry_path'][-9:-6]
+        scan = config['Greenhouse']['SimulationSpace']['geometry_path'][-9:-6]
         affine = nib.load(f'/home/shared/Data/ATM22/train/images/ATM_{scan}_0000.nii.gz').affine
 
         nib.save(nib.Nifti1Image(volume, affine), f"{dir}/volume.nii.gz")

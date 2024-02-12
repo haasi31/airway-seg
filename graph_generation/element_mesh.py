@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 from typing import Generic, TypeVar
-from vessel_graph_generation.arterial_tree import Node
+from graph_generation.tree import Node
 import numpy as np
 
-from vessel_graph_generation.utilities import eukledian_dist
+from graph_generation.utilities import eukledian_dist
 
 import open3d as o3d
 

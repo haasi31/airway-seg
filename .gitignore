@@ -16,8 +16,8 @@ TODO.md
 *.err
 *.out
 
-vessel_graph_generation/datasets
-vessel_graph_generation/geometries/*/*.npy
-vessel_graph_generation/geometries/*/*.yml
+graph_generation/datasets
+graph_generation/geometries/*/*.npy
+graph_generation/geometries/*/*.yml
 
 **/*.code-workspace
